@@ -58,7 +58,7 @@ const config: Config = {
       logo: {
         alt: 'Ilona\'s about-me logo',
         src: 'img/logo.png',
-        href: '/docs/intro'
+        href: '/me'
       },
       items: [
         {
@@ -66,10 +66,10 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
-          label: 'Blog',
+          label: 'Docs',
         },
         {
-          to: 'about-me/intro',
+          to: '/me',
           sidebarId: 'tutorialSidebar',
           position: 'left',
           label: 'About Me',
