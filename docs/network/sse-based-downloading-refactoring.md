@@ -62,20 +62,20 @@ SSE(Server-Sent Events) 는 `WebSocket`처럼 클라이언트와 서버 간의 �
 이는 클라이언트가 서버와 단반향 스트림을 통해 지속적으로 메시지를 받을 수 있도록 해주는 표준 인터페이스이다.  
 아래는 클라이언트가 서버의 `SSE`를 구독하고 상태를 수신받는 구조이다.
 ```ts
-const eventSource = new EventSource(`subscribe`);
+const eventSource = new EventSource(`/subscribe`);
 
 eventSource.onmessage = (event) => {
-  const { status } = JSON.parse(event.data); // string 형태로 내려오는 JSON 데이터 일 경우 파싱 처리
-  console.log(`다운로드 상태: ${ status }`);
-  
-  if (status === 'COMPLETED') {
-	  eventSource.close(); // SSE 연결 종료
-  }
+    const { status } = JSON.parse(event.data); // string 형태로 내려오는 JSON 데이터 일 경우 파싱 처리
+    console.log(`다운로드 상태: ${ status }`);
+
+    if (status === 'COMPLETED') {
+        eventSource.close(); // SSE 연결 종료
+    }
 };
 
 eventSource.onerror = (error) => {
-  console.error("SSE 연결 오류:", error);
-  eventSource.close();
+    console.error("SSE 연결 오류:", error);
+    eventSource.close();
 };
 ```
 서버에서 전달되는 `event.data`는 기본적으로 문자열 형태이기 때문에, 일반적으로 JSON 데이터를 다룰 경우 `JSON.parse()`를 통해 객체로 변환해주어야한다.
@@ -87,27 +87,27 @@ import express from 'express';
 
 const router = express.Router();
 
-router.get('/subscribe', (req, res) => {  
-    res.set({  
-        'Content-Type': 'text/event-stream',  
-        'Cache-Control': 'no-cache',  
-        'Connection': 'keep-alive'  
-    })  
-  
-    let count = 0;  
-    const interval = setInterval(() => {  
-        count++;  
-        
-        const status = count >= 5 ? 'COMPLETED' : 'IN_PROGRESS';  
-        
-        res.write(`data: ${ JSON.stringify({ status }) }\n\n`);  
-        if (status === 'COMPLETED') {  
-            clearInterval(interval);  
-            res.end();  
-        }  
-    }, 1000)  
-  
-    req.on('close', () => clearInterval(interval));  
+router.get('/subscribe', (req, res) => {
+	res.set({
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		'Connection': 'keep-alive'
+	})
+
+	let count = 0;
+	const interval = setInterval(() => {
+		count++;
+
+		const status = count >= 5 ? 'COMPLETED' : 'IN_PROGRESS';
+
+		res.write(`data: ${ JSON.stringify({ status }) }\n\n`); // 문자열 형태로 전송
+		if (status === 'COMPLETED') {
+			clearInterval(interval);
+			res.end(); // 스트림 종료
+		}
+	}, 1000)
+
+	req.on('close', () => clearInterval(interval));
 });  
 ```
 
@@ -139,31 +139,31 @@ import EventSource from 'eventsource';
 const router = express.Router();
 
 router.get('/subscribe/:code', (req, res) => {
-    const { code } = req.params;
+	const { code } = req.params;
 
-    res.set({
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-    });
+	res.set({
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		'Connection': 'keep-alive'
+	});
 
-    // 백엔드 SSE 구독
-    const backendEventSource = new EventSource(`{ backendEndPoint }/subscribe/${ code }`);
+	// 백엔드 SSE 구독
+	const backendEventSource = new EventSource(`{ backendEndPoint }/subscribe/${ code }`);
 
-    backendEventSource.onmessage = (event) => {
-        res.write(`data: ${ event.data }\n\n`);
-    };
+	backendEventSource.onmessage = (event) => {
+		res.write(`data: ${ event.data }\n\n`);
+	};
 
-    backendEventSource.onerror = (e) => {
-        console.error("백엔드 SSE 연결 에러:", e);
-        res.write(`data: ${ JSON.stringify({ status: 'ERROR' }) }\n\n`);
-        res.end();
-        backendEventSource.close();
-    };
+	backendEventSource.onerror = (e) => {
+		console.error("백엔드 SSE 연결 에러:", e);
+		res.write(`data: ${ JSON.stringify({ status: 'ERROR' }) }\n\n`);
+		res.end();
+		backendEventSource.close();
+	};
 
-    req.on('close', () => {
-        backendEventSource.close();
-    });
+	req.on('close', () => {
+		backendEventSource.close();
+	});
 });
 ```
 <br/>
@@ -171,21 +171,23 @@ router.get('/subscribe/:code', (req, res) => {
 ## SSE 개선 작업 중 궁금했던 점
 ***
 ### 1. 요청할 때마다 새로운 스트림이 열리게 될까?
-`new EventSource(url)`을 호출 할 때마다 새로운 `SSE`연결이 생성되므로, 불필요한 리소스 방지를 위해 같은 요청에 대한 `eventSource`의 객체가 없을 경우에만 새로운 스트림을 생성할 수 있도록 중복방지 코드를 작성해주는 것이 좋다.
+그렇다. `new EventSource(url)`을 호출 할 때마다 새로운 `SSE`연결이 생성되므로, 불필요한 리소스 방지를 위해 같은 요청에 대한 `eventSource`의 객체가 없을 경우에만 새로운 스트림을 생성할 수 있도록 중복방지 코드를 작성해주는 것이 좋다.
 ```ts
-if (!eventSource) { eventSource = new EventSource('/subscribe'); }
+if (!eventSource) {
+	eventSource = new EventSource('/subscribe');
+}
 ```
 
-리액트로 처음 작성한 프로젝트였기 때문에, 불필요한 리렌더링을 방지하고 SSE 연결을 하나로 유지하기 위해 `useRef`을 활용했다.  
+불필요한 리렌더링을 방지하고 SSE 연결을 하나로 유지하기 위해 `useRef`을 활용했다.  
 초기화된 `EventSource` 인스턴스를 `eventSourceRef`에 저장해두고, 이미 연결되어 있는 경우에는 새로 생성하지 않도록 구성한 방식이다.
 ```ts
 const eventSourceRef = useRef(null);
 
 const startSSE = () => {
-  if (!eventSourceRef.current) {
-    eventSourceRef.current = new EventSource('/subscribe');
-    eventSourceRef.current.onmessage = (e) => console.log('데이터:', e.data);
-  }
+    if (!eventSourceRef.current) {
+        eventSourceRef.current = new EventSource('/subscribe');
+        eventSourceRef.current.onmessage = (e) => console.log('데이터:', e.data);
+    }
 };
 ```
 만약 매번 다른 요청이 주어진다면, 요청때마다 새로운 스트림을 열어야하고, 같은 조건의 요청에 대해서만 새로운 스트림이 열리지 않게 하려면 `Map`을 활용하여 요청별 스트림을 관리하는 방법이 있다.
@@ -193,14 +195,14 @@ const startSSE = () => {
 const eventSourceMap = new Map<string, EventSource>();
 
 const startSSE = (code: string) => {
-    if (eventSourceMap.has(code)) { // 해당 code에 대한 요청을 중복으로 하는 경우 요청 제한
-        console.log(`이미 연결된 스트림: ${ code }`);
-        return;
-    }
-    
+	if (eventSourceMap.has(code)) { // 해당 code에 대한 요청을 중복으로 하는 경우 요청 제한
+		console.log(`이미 연결된 스트림: ${ code }`);
+		return;
+	}
+
 	const eventSource = new EventSource(`/subscribe/${ code }`);
 	eventSourceMap.set(code, eventSource); // code 별 요청 저장
-    
+
 	eventSource.onmessage = (event) => {
 		const { status } = JSON.parse(event.data);
 
@@ -225,13 +227,13 @@ SSE 연결은 기본적으로 서버가 응답을 보내지 않더라도 계속 
 
 ### 3. 스트림을 무한하게 생성할 수 있을까?
 SSE 연결은 브라우저마다 기본적으로 설정되어있는 최대 갯수가 있다.
-평균적으로 크롬이나, 파이어폭스, 엣지 등과 같은 대표 브라우저들은 6개까지 제한을 두고 있고 이 이상의 스트림 연결 요청이 있을 경우 브라우저에서 큐를 쌓아 이후 요청들을 처리한다.
+평균적으로 크롬이나, 파이어폭스, 엣지 등과 같은 대표 브라우저들은 동일한 origin에 한해 6개까지 제한을 두고 있고 이 이상의 스트림 연결 요청이 있을 경우 브라우저에서 큐를 쌓아 이후 요청들을 처리한다.
 
 <br/>
 
 ## 개선 작업을 진행하면서 느낀 점
 ***
-여러 요청이 겹쳐도 브라우저가 알아서 스트림을 큐처럼 쌓아주기 때문에, 생각보다 관리가 편했고 서버의 부담도 덜 수 있어서 이 점이 의외로 큰 장점처럼 느껴졌다.
+제한 갯수 이상의 요청이 겹쳐도 브라우저가 알아서 스트림을 큐처럼 쌓아주기 때문에, 생각보다 관리가 편했고 서버의 부담도 덜 수 있어서 이 점이 의외로 큰 장점처럼 느껴졌다.
 물론 `Polling`방식에도 분명한 장점은 있다. 구현이 단순하고, 대부분의 브라우저나 네트워크 환경에서 안정적으로 동작하며 주기적으로 확인할 수 있기 때문에 예측 가능성이 높다는 점에서 유용하다.  
 
 하지만 `SSE`는 트래픽을 점유하지 않는 단일 연결로 실시간 상태를 받을 수 있기 때문에, 새 창을 띄우지 않아도 되고, 하나의 화면 안에서 다운로드 상태를 실시간으로 확인하고 처리할 수 있다는 점이
