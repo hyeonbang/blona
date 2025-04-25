@@ -53,6 +53,10 @@ const config: Config = {
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
+    metadata: [{
+          name: 'google-site-verification',
+          content: '<meta name="google-site-verification" content="WEyBCq6sWzit8O0uzHP3u-lfbO_JvOOGiwJdb6O6_Rg" />',
+        }],
     navbar: {
       title: 'Blona',
       logo: {
@@ -130,15 +134,6 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-    headTags: [
-      {
-        tagName: 'meta',
-        attributes: {
-          name: 'google-site-verification',
-          content: '<meta name="google-site-verification" content="WEyBCq6sWzit8O0uzHP3u-lfbO_JvOOGiwJdb6O6_Rg" />',
-        },
-      }
-    ],
   } satisfies Preset.ThemeConfig,
 };
 
